@@ -1,4 +1,28 @@
-# Receipt-to-Ledger (LOOP 2026)
+# Receipt-to-Ledger
+
+![Receipt-to-Ledger](demo/devpost/cover.png)
+
+**Snap a receipt. AI reads it. You approve it in one tap. It lands in your ledger.** Built entirely in n8n for the UBC eProjects × n8n LOOP buildathon (2026) by Braxton Hauw and Lucy Liu.
+
+▶️ **Demo video:** https://youtu.be/9-oiBAJGAbE · 🏁 **Devpost:** https://devpost.com/software/receipt-to-ledger
+
+| Upload | Check what the AI read | Logged + budgeted |
+|---|---|---|
+| ![](demo/ui-v2/1-upload-laptop.png) | ![](demo/ui-v2/2-review-laptop.png) | ![](demo/ui-v2/3-logged-laptop.png) |
+
+**What it does**
+- AI vision reads the store, date, subtotal, GST, PST and total, and suggests a category.
+- Code checks the math (subtotal + taxes = total, GST is 5%) and notes tax-exempt items.
+- A human approves, re-categorises or rejects before anything is saved.
+- Splits with roommates and tracks who owes you; only your share counts toward your budget.
+- Flags receipts to keep for taxes (medical expense credit, tuition).
+- Every Sunday, an AI-written recap of your week.
+
+![How it's built](demo/devpost/gallery-3-how.png)
+
+---
+
+## Set it up yourself
 
 Snap a receipt. AI reads the store, the amounts and the GST/PST split. You check it in one tap. It goes into your Google Sheet ledger, split with roommates if you shared it, with the receipts worth keeping for taxes flagged. On Sundays you get an email recap.
 

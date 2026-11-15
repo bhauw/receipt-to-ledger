@@ -62,7 +62,7 @@ Team: Braxton Hauw, Lucy Liu. Built with n8n.
 **6. Devpost** (copy from `devpost.md`):
 - Attach the workflow file, or link a GitHub repo.
 - Tick the tracks: n8n Track and Investly Finance Track.
-- Submit by **2:30 PM**.
+- Submit.
 
 ## What's in here
 - `workflow/receipt-to-ledger.json` is the n8n workflow, with 17 nodes in two flows:

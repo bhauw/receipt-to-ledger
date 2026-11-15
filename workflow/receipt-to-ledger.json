@@ -1,0 +1,622 @@
+{
+  "name": "Receipt-to-Ledger (LOOP 2026)",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Receipt-to-Ledger",
+        "formDescription": "Snap a receipt. AI reads it, you check it, and it lands in your ledger.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Receipt photo",
+              "fieldType": "file",
+              "multipleFiles": false,
+              "acceptFileTypes": ".jpg, .jpeg, .png, .webp",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Paid with",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Debit"
+                  },
+                  {
+                    "option": "Credit card"
+                  },
+                  {
+                    "option": "Cash"
+                  },
+                  {
+                    "option": "E-transfer"
+                  }
+                ]
+              }
+            },
+            {
+              "fieldLabel": "Split with",
+              "fieldType": "text",
+              "placeholder": "e.g. Lucy, Sam (leave blank if it's just you)"
+            }
+          ]
+        },
+        "options": {
+          "appendAttribution": false,
+          "buttonLabel": "Read my receipt"
+        }
+      },
+      "id": "f91f74b0-3f5d-55e5-8f91-1385ae59a94f",
+      "name": "Upload receipt",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "3bd012d2-e950-5b03-b8a5-1c15549ff7cc"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Keep the uploaded file under a fixed name, whatever the form field is called.\nconst item = $input.first();\nconst keys = Object.keys(item.binary || {});\nif (!keys.length) throw new Error('No receipt photo was uploaded');\nreturn [{ json: item.json, binary: { receipt: item.binary[keys[0]] } }];"
+      },
+      "id": "2c6e5d95-0e33-5bc4-bcb1-1ac7545f7f0a",
+      "name": "Name the file",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "operation": "analyze",
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "text": "You are a bookkeeper for a university student in British Columbia, Canada. Read this receipt and reply with ONLY a JSON object, no prose, no code fences:\n{\"vendor\": string, \"date\": \"YYYY-MM-DD\", \"subtotal\": number, \"gst\": number, \"pst\": number, \"hst\": number, \"total\": number, \"currency\": \"CAD\" or other ISO code, \"category\": one of [\"Groceries\", \"Dining & coffee\", \"Transport\", \"Textbooks & school\", \"Rent & utilities\", \"Subscriptions\", \"Health\", \"Entertainment\", \"Shopping\", \"Other\"], \"confidence\": number 0-1, \"notes\": string}\nRules: use 0 for a tax that is not printed. GST is 5% federal; BC PST is 7%. Basic groceries are usually tax-free and restaurant meals are usually GST-only. Never invent numbers: if a value is unreadable use null and say so in notes. Pick the closest category.",
+        "inputType": "base64",
+        "binaryPropertyName": "receipt",
+        "options": {
+          "detail": "high",
+          "maxTokens": 600
+        }
+      },
+      "id": "32117ca8-b9e1-5255-872a-873ab9f697a5",
+      "name": "Read receipt (AI)",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const CATS_ = [\"Groceries\", \"Dining & coffee\", \"Transport\", \"Textbooks & school\", \"Rent & utilities\", \"Subscriptions\", \"Health\", \"Entertainment\", \"Shopping\", \"Other\"];\n// Turn the model's reply into clean numbers and run the bookkeeping checks.\nconst r = $input.first().json;\nconst raw = String(r.content ?? r.text ?? r.message?.content ?? r.output ?? JSON.stringify(r));\nconst m = raw.replace(/```(json)?/g, '').match(/\\{[\\s\\S]*\\}/);\nif (!m) throw new Error('The model did not return JSON: ' + raw.slice(0, 200));\nconst d = JSON.parse(m[0]);\nconst num = v => (v === null || v === undefined || v === '' || isNaN(Number(v))) ? null : Math.round(Number(v) * 100) / 100;\nconst out = {\n  vendor: d.vendor || 'Unknown vendor',\n  date: /^\\d{4}-\\d{2}-\\d{2}$/.test(d.date || '') ? d.date : new Date().toISOString().slice(0, 10),\n  subtotal: num(d.subtotal), gst: num(d.gst) ?? 0, pst: num(d.pst) ?? 0, hst: num(d.hst) ?? 0,\n  total: num(d.total), currency: d.currency || 'CAD',\n  category: CATS_.includes(d.category) ? d.category : 'Other',\n  confidence: num(d.confidence) ?? 0, notes: d.notes || '',\n  paid_with: $('Upload receipt').first().json['Paid with'] || '',\n};\n// Roommate split: equal shares between you and everyone named.\nconst names = String($('Upload receipt').first().json['Split with'] || '').split(/[,&]| and /).map(s => s.trim()).filter(Boolean);\nout.split_with = names.join(', ');\nconst t = out.total ?? 0;\nout.each_owes = names.length ? Math.round(t / (names.length + 1) * 100) / 100 : 0;\nout.your_share = Math.round((t - out.each_owes * names.length) * 100) / 100;\nout.split_text = names.length ? `Split ${names.length + 1} ways: ${names.join(', ')} each owe you $${out.each_owes.toFixed(2)}; your share $${out.your_share.toFixed(2)}` : 'Not split';\nconst flags = [];\nif (out.total === null) flags.push('Total could not be read');\nif (out.subtotal !== null && out.total !== null) {\n  const sum = out.subtotal + out.gst + out.pst + out.hst;\n  if (Math.abs(sum - out.total) > 0.05) flags.push(`Subtotal + taxes = $${sum.toFixed(2)}, but total says $${out.total.toFixed(2)}`);\n  if (out.gst > 0 && Math.abs(out.gst - out.subtotal * 0.05) > 0.06) flags.push('GST is not 5% of the subtotal');\n  if (out.pst > 0 && Math.abs(out.pst - out.subtotal * 0.07) > 0.06 && out.pst < out.subtotal * 0.07) flags.push('PST is under 7%: some items may be PST-exempt');\n}\nif (out.confidence < 0.7) flags.push(`AI is only ${Math.round(out.confidence * 100)}% sure`);\nout.flags = flags;\nout.flag_text = flags.length ? '⚠ ' + flags.join(' · ') : '✓ The totals add up';\nreturn [{ json: out }];"
+      },
+      "id": "b69b453a-4d79-5cd3-93f8-0d3f578e3f17",
+      "name": "Parse + check",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Decision",
+              "fieldType": "dropdown",
+              "requiredField": true,
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Approve"
+                  },
+                  {
+                    "option": "Approve with a different category"
+                  },
+                  {
+                    "option": "Reject"
+                  }
+                ]
+              }
+            },
+            {
+              "fieldLabel": "Category",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Groceries"
+                  },
+                  {
+                    "option": "Dining & coffee"
+                  },
+                  {
+                    "option": "Transport"
+                  },
+                  {
+                    "option": "Textbooks & school"
+                  },
+                  {
+                    "option": "Rent & utilities"
+                  },
+                  {
+                    "option": "Subscriptions"
+                  },
+                  {
+                    "option": "Health"
+                  },
+                  {
+                    "option": "Entertainment"
+                  },
+                  {
+                    "option": "Shopping"
+                  },
+                  {
+                    "option": "Other"
+                  }
+                ]
+              }
+            },
+            {
+              "fieldLabel": "Note",
+              "fieldType": "text",
+              "placeholder": "optional, e.g. split with roommate"
+            }
+          ]
+        },
+        "options": {
+          "formTitle": "Check this before it's logged",
+          "formDescription": "={{ $json.vendor }} · {{ $json.date }}\nSubtotal ${{ $json.subtotal }} · GST ${{ $json.gst }} · PST ${{ $json.pst }} · Total ${{ $json.total }} {{ $json.currency }}\nAI category: {{ $json.category }}\n{{ $json.split_text }}\n{{ $json.flag_text }}",
+          "buttonLabel": "Log it"
+        }
+      },
+      "id": "179be12f-66d3-531b-9f06-bad9ae577330",
+      "name": "Human check",
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 1,
+      "position": [
+        880,
+        0
+      ],
+      "webhookId": "2beb1bd8-78c9-5167-ae7f-b8b6efe3b1a1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.Decision }}",
+              "rightValue": "Reject",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "6bbdb892-826f-5495-a664-9f0cc405aa27",
+      "name": "Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1100,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// One ledger row: the AI's reading plus the human's decision.\nconst d = $('Parse + check').first().json;\nconst f = $input.first().json;\nconst changed = f['Decision'] === 'Approve with a different category' && f['Category'];\nconst category = changed ? f['Category'] : d.category;\n// Receipts a Canadian student should keep for their tax return.\nconst keep = category === 'Health' ? 'Yes: medical expense tax credit'\n  : /tuition/i.test(d.vendor + ' ' + d.notes) ? 'Yes: tuition (match to your T2202)' : '';\nreturn [{ json: {\n  'Date': d.date, 'Vendor': d.vendor, 'Subtotal': d.subtotal, 'GST': d.gst, 'PST': d.pst, 'HST': d.hst,\n  'Total': d.total, 'Your share': d.your_share, 'Split with': d.split_with, 'Each owes you': d.each_owes,\n  'Currency': d.currency, 'Category': category, 'Keep for taxes': keep,\n  'AI category': d.category, 'Paid with': d.paid_with, 'Checks': d.flag_text,\n  'Note': f['Note'] || '', 'Logged at': new Date().toISOString(),\n} }];"
+      },
+      "id": "6c8c0588-058a-5293-b84d-9c2df3002f85",
+      "name": "Build row",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Ledger",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "33a06d25-0921-5b74-b997-12182352dbbc",
+      "name": "Append to ledger",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1540,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Ledger",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "id": "18ceb828-5223-5701-8f87-16c629d5151f",
+      "name": "Read ledger (month)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1760,
+        -100
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Month-to-date spend vs budget, for the confirmation page.\nconst BUDGET = 600;\nconst month = new Date().toISOString().slice(0, 7);\nconst rows = $input.all().map(i => i.json).filter(r => String(r['Date'] || '').startsWith(month));\nconst mine = r => Number(r['Your share'] !== '' && r['Your share'] !== undefined ? r['Your share'] : r['Total']) || 0;\nconst spent = rows.reduce((s, r) => s + mine(r), 0);\nconst row = $('Build row').first().json;\nconst cat = rows.filter(r => r['Category'] === row['Category']).reduce((s, r) => s + mine(r), 0);\nconst owed = {};\nfor (const r of rows) for (const n of String(r['Split with'] || '').split(',').map(s => s.trim()).filter(Boolean))\n  owed[n] = (owed[n] || 0) + (Number(r['Each owes you']) || 0);\nconst owedText = Object.entries(owed).map(([n, v]) => `${n} $${v.toFixed(2)}`).join(', ');\nreturn [{ json: {\n  owed: owedText ? `Owed to you this month: ${owedText}.` : '',\n  keep: row['Keep for taxes'] ? `📁 Keep this receipt: ${row['Keep for taxes']}.` : '',\n  vendor: row['Vendor'], total: Number(row['Total']).toFixed(2), category: row['Category'],\n  spent: spent.toFixed(2), budget: BUDGET, pct: Math.round(spent / BUDGET * 100),\n  left: (BUDGET - spent).toFixed(2), cat_spent: cat.toFixed(2), count: rows.length,\n} }];"
+      },
+      "id": "c1c6231f-7aca-555e-8d71-e06d1bdadc36",
+      "name": "Budget math",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1980,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "completion",
+        "respondWith": "text",
+        "completionTitle": "Logged ✓",
+        "completionMessage": "={{ $json.vendor }} ${{ $json.total }} → {{ $json.category }}.\nThis month: ${{ $json.spent }} of ${{ $json.budget }} ({{ $json.pct }}%), ${{ $json.left }} left. {{ $json.category }} so far: ${{ $json.cat_spent }}.\n{{ $json.owed }}\n{{ $json.keep }}",
+        "options": {}
+      },
+      "id": "d7778fc1-4c7b-5a55-9f93-fe00a0ecca71",
+      "name": "Logged",
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 1,
+      "position": [
+        2200,
+        -100
+      ],
+      "webhookId": "1fec81b6-971c-56c5-809d-c20680814170"
+    },
+    {
+      "parameters": {
+        "operation": "completion",
+        "respondWith": "text",
+        "completionTitle": "Not logged",
+        "completionMessage": "Nothing was added to your ledger.",
+        "options": {}
+      },
+      "id": "9f160768-46da-552b-874d-0cb07b93a260",
+      "name": "Discarded",
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 1,
+      "position": [
+        1320,
+        100
+      ],
+      "webhookId": "809fc8d7-479c-5311-abaf-9a6f89ecffa3"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                0
+              ],
+              "triggerAtHour": 18
+            }
+          ]
+        }
+      },
+      "id": "1fb04797-44af-57b4-8827-131d305aa58f",
+      "name": "Every Sunday 6 PM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Ledger",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "id": "fd219776-9cb9-5fa8-9664-52d0f97ebdc0",
+      "name": "Read ledger (week)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        220,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Last 7 days: totals by category, taxes paid, biggest purchases.\nconst WEEKLY_BUDGET = Math.round(600 / 4.33);\nconst since = new Date(Date.now() - 7 * 864e5).toISOString().slice(0, 10);\nconst rows = $input.all().map(i => i.json).filter(r => String(r['Date'] || '') >= since);\nconst by = {}, owed = {};\nlet total = 0, tax = 0, keep = 0;\nfor (const r of rows) {\n  const t = Number(r['Your share'] !== '' && r['Your share'] !== undefined ? r['Your share'] : r['Total']) || 0;\n  total += t; tax += (Number(r['GST']) || 0) + (Number(r['PST']) || 0) + (Number(r['HST']) || 0);\n  by[r['Category']] = (by[r['Category']] || 0) + t;\n  if (r['Keep for taxes']) keep++;\n  for (const n of String(r['Split with'] || '').split(',').map(s => s.trim()).filter(Boolean))\n    owed[n] = (owed[n] || 0) + (Number(r['Each owes you']) || 0);\n}\nconst owedText = Object.entries(owed).map(([n, v]) => `${n} owes you $${v.toFixed(2)}`).join('; ') || 'Nobody owes you anything';\nconst cats = Object.entries(by).sort((a, b) => b[1] - a[1]).map(([c, v]) => `${c}: $${v.toFixed(2)}`);\nconst top = rows.sort((a, b) => (Number(b['Total']) || 0) - (Number(a['Total']) || 0)).slice(0, 3)\n  .map(r => `${r['Vendor']} $${Number(r['Total']).toFixed(2)} (${r['Category']})`);\nreturn [{ json: { since, receipts: rows.length, total: total.toFixed(2), tax: tax.toFixed(2),\n  weekly_budget: WEEKLY_BUDGET, over: total > WEEKLY_BUDGET, by_category: cats.join('\\n'), top: top.join('\\n'),\n  owed: owedText, keep } }];"
+      },
+      "id": "39470dfb-4658-5b05-a4f3-45ede2134126",
+      "name": "Week summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "text",
+        "operation": "message",
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Write a 4-sentence weekly money note to a university student. Friendly, specific, no lecturing, no investment advice. Use only these numbers.\nWeek since {{ $json.since }}: {{ $json.receipts }} receipts, ${{ $json.total }} spent (weekly budget ${{ $json.weekly_budget }}{{ $json.over ? ', OVER' : '' }}), taxes paid ${{ $json.tax }}.\nBy category:\n{{ $json.by_category }}\nBiggest:\n{{ $json.top }}\nRoommate IOUs: {{ $json.owed }}. Receipts to keep for taxes: {{ $json.keep }}.\nEnd with one concrete thing to try next week."
+            }
+          ]
+        },
+        "options": {
+          "maxTokens": 300
+        }
+      },
+      "id": "3d54a2c2-894d-5535-892a-b8bb1cb42999",
+      "name": "Write the nudge (AI)",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        660,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "you@example.com",
+        "subject": "=Your week: ${{ $('Week summary').item.json.total }} spent",
+        "emailType": "text",
+        "message": "={{ $json.message?.content ?? $json.content ?? $json.text }}\n\nBy category:\n{{ $('Week summary').item.json.by_category }}\n\n{{ $('Week summary').item.json.owed }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "92e45bd1-773d-5360-b928-5b10b133adb4",
+      "name": "Email the digest",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        880,
+        400
+      ],
+      "webhookId": "551da7cd-753f-522e-a17f-31ac5823f106"
+    }
+  ],
+  "connections": {
+    "Upload receipt": {
+      "main": [
+        [
+          {
+            "node": "Name the file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Name the file": {
+      "main": [
+        [
+          {
+            "node": "Read receipt (AI)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read receipt (AI)": {
+      "main": [
+        [
+          {
+            "node": "Parse + check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse + check": {
+      "main": [
+        [
+          {
+            "node": "Human check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Human check": {
+      "main": [
+        [
+          {
+            "node": "Approved?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build row": {
+      "main": [
+        [
+          {
+            "node": "Append to ledger",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append to ledger": {
+      "main": [
+        [
+          {
+            "node": "Read ledger (month)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read ledger (month)": {
+      "main": [
+        [
+          {
+            "node": "Budget math",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Budget math": {
+      "main": [
+        [
+          {
+            "node": "Logged",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Every Sunday 6 PM": {
+      "main": [
+        [
+          {
+            "node": "Read ledger (week)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read ledger (week)": {
+      "main": [
+        [
+          {
+            "node": "Week summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Week summary": {
+      "main": [
+        [
+          {
+            "node": "Write the nudge (AI)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write the nudge (AI)": {
+      "main": [
+        [
+          {
+            "node": "Email the digest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Approved?": {
+      "main": [
+        [
+          {
+            "node": "Build row",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Discarded",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "active": false
+}

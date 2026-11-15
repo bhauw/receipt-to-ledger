@@ -1,0 +1,169 @@
+/* Receipt-to-Ledger form theme: a paper receipt on a dark green desk.
+   Applied to every n8n form page (upload, review, logged, not logged) via the node's Custom CSS option.
+   Lucy: the tokens at the top are the quick knobs. */
+:root {
+  --font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --ink: #17221c;
+  --ink-soft: #55635b;
+  --paper: #f7f4ec;
+  --paper-edge: #e3ddcc;
+  --green: #1d8653;
+  --green-soft: #e3f3e9;
+  --amber: #a5620a;
+  --amber-soft: #fbf0dc;
+
+  --font-size-header: 24px;
+  --font-size-label: 14px;
+  --font-size-input: 15px;
+  --font-size-paragraph: 15px;
+  --color-background: #0f1412;
+  --color-card-bg: var(--paper);
+  --color-card-border: var(--paper-edge);
+  --color-card-shadow: rgba(0, 0, 0, 0.45);
+  --color-header: var(--ink);
+  --color-header-subtext: var(--ink-soft);
+  --color-label: var(--ink);
+  --color-link: var(--ink-soft);
+  --color-input-border: #d6cfbd;
+  --color-input-text: var(--ink);
+  --color-input-bg: #fffdf8;
+  --color-focus-border: var(--green);
+  --color-submit-btn-bg: var(--green);
+  --color-submit-btn-text: #ffffff;
+  --color-required: var(--green);
+  --color-html-text: var(--ink);
+  --color-html-link: var(--green);
+  --border-radius-card: 14px;
+  --border-radius-input: 10px;
+  --container-width: 460px;
+  --padding-container-top: 40px;
+  --padding-card: 28px;
+  --box-shadow-card: 0 24px 60px rgba(0, 0, 0, 0.45);
+}
+
+body {
+  min-height: 100vh;
+  background: radial-gradient(900px 420px at 50% -8%, #21402f 0%, #0f1412 62%) fixed, #0f1412;
+  padding: 0 16px 48px;
+}
+
+/* The card is the receipt: brand line on top, torn edge at the bottom. */
+.card {
+  position: relative;
+  border-radius: var(--border-radius-card) var(--border-radius-card) 0 0;
+  border-top: 5px solid var(--green);
+  margin-bottom: 28px;
+}
+.card::after {
+  content: "";
+  position: absolute;
+  left: -1px;
+  right: -1px;
+  bottom: -12px;
+  height: 12px;
+  background:
+    linear-gradient(135deg, var(--paper) 50%, transparent 50%) 0 0 / 16px 12px repeat-x,
+    linear-gradient(-135deg, var(--paper) 50%, transparent 50%) 0 0 / 16px 12px repeat-x;
+}
+.form-header::before {
+  content: "RECEIPT-TO-LEDGER";
+  display: block;
+  font: 600 11px/1 var(--mono);
+  letter-spacing: 0.18em;
+  color: var(--green);
+  margin-bottom: 12px;
+}
+.form-header h1 {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+.form-header p {
+  color: var(--ink-soft);
+  line-height: 1.5;
+}
+
+.form-label { font-weight: 600; }
+input[type="radio"], input[type="checkbox"] { accent-color: var(--green); }
+input, select, textarea { transition: border-color 0.15s, box-shadow 0.15s; }
+input:focus, select:focus, textarea:focus { box-shadow: 0 0 0 3px rgba(29, 134, 83, 0.18); }
+
+#submit-btn {
+  font-size: 16px;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  border-radius: 12px;
+  box-shadow: 0 6px 16px rgba(29, 134, 83, 0.35);
+  transition: transform 0.08s, filter 0.15s;
+}
+#submit-btn:hover { filter: brightness(1.08); }
+#submit-btn:active { transform: translateY(1px); }
+
+/* Review page: what the AI read, printed like a receipt. */
+.r-card {
+  font-family: var(--mono);
+  background: #fffdf8;
+  border: 1px solid var(--paper-edge);
+  border-radius: 10px;
+  padding: 16px 18px;
+  color: var(--ink);
+  text-align: left;
+}
+.r-vendor { font-weight: 700; font-size: 16px; letter-spacing: 0.02em; }
+.r-meta { color: var(--ink-soft); font-size: 13px; margin-top: 4px; }
+.r-rule { border-top: 1px dashed #cfc7b2; margin: 12px 0; }
+.r-line { display: flex; justify-content: space-between; font-size: 14px; padding: 3px 0; }
+.r-total { font-weight: 700; font-size: 16px; padding-top: 8px; }
+.r-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.r-tag {
+  font: 500 12px/1 var(--font-family);
+  background: #efeadd;
+  color: var(--ink);
+  border-radius: 999px;
+  padding: 6px 10px;
+}
+.r-check {
+  margin-top: 12px;
+  font: 600 13px/1.4 var(--font-family);
+  border-radius: 8px;
+  padding: 9px 12px;
+}
+.r-ok { background: var(--green-soft); color: var(--green); }
+.r-warn { background: var(--amber-soft); color: var(--amber); }
+
+/* Logged page: the budget at a glance. */
+.d-card { text-align: left; color: var(--ink); margin-top: 6px; }
+.d-what { display: flex; flex-direction: column; gap: 2px; font-size: 15px; }
+.d-what span { color: var(--ink-soft); }
+.d-label {
+  margin-top: 18px;
+  font: 600 11px/1 var(--mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.d-bar {
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
+  width: 100%;
+  height: 12px;
+  margin: 10px 0 8px;
+  border: 0;
+  border-radius: 999px;
+  overflow: hidden;
+  background: #e6e0d0;
+}
+.d-bar::-webkit-progress-bar { background: #e6e0d0; border-radius: 999px; }
+.d-bar::-webkit-progress-value { background: var(--green); border-radius: 999px; }
+.d-bar::-moz-progress-bar { background: var(--green); border-radius: 999px; }
+.d-nums { display: flex; justify-content: space-between; font: 600 14px/1.3 var(--mono); }
+.d-sub { color: var(--ink-soft); font-size: 13px; margin-top: 4px; }
+.d-chip { margin-top: 12px; border-radius: 8px; padding: 10px 12px; font-size: 14px; line-height: 1.4; }
+.d-owed { background: #e8eefb; color: #23407a; }
+.d-keep { background: var(--amber-soft); color: var(--amber); }
+
+@media (max-width: 480px) {
+  :root { --padding-card: 20px; --padding-container-top: 20px; }
+}

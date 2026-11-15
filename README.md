@@ -4,7 +4,7 @@
 
 **Snap a receipt. AI reads it. You approve it in one tap. It lands in your ledger.** Built entirely in n8n for the UBC eProjects × n8n LOOP buildathon (2026) by Braxton Hauw and Lucy Liu.
 
-▶️ **Demo video:** https://youtu.be/9-oiBAJGAbE · 🏁 **Devpost:** https://devpost.com/software/receipt-to-ledger
+▶️ **Demo video:** https://youtu.be/3-x6X6M5cFs · 🏁 **Devpost:** https://devpost.com/software/receipt-to-ledger
 
 | Upload | Check what the AI read | Logged + budgeted |
 |---|---|---|

@@ -28,7 +28,7 @@ Snap a receipt. AI reads the store, the amounts and the GST/PST split. You check
 
 Team: Braxton Hauw, Lucy Liu. Built with n8n.
 
-## Steps for today (deadline 2:45 PM on Devpost)
+### Steps
 
 **1. Accounts (you do these yourself, all free, no card)**
 - n8n: go to n8n.io and start the free cloud trial. The trial includes free OpenAI credits, so you don't need an API key.

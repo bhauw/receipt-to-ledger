@@ -162,6 +162,17 @@ input:focus, select:focus, textarea:focus { box-shadow: 0 0 0 3px rgba(29, 134, 
 .card blockquote { background: #e8eefb; color: #23407a; }
 .card aside { background: var(--amber-soft); color: var(--amber); }
 
+/* Completion pages put the message in .header p; keep the table readable there. */
+.card .header table { margin-top: 10px; }
+.card .header th:first-child { font-size: 12px; letter-spacing: -1px; color: var(--green); font-weight: 400; }
+.card .header td:first-child { color: var(--ink-soft); padding-right: 12px; }
+
+/* Never wider than the screen; keep the inner padding on narrow screens too. */
+.container, section, .card { max-width: 100%; }
+.card { padding: var(--padding-card) !important; }
+.form-group.html { margin-bottom: 18px; }
+.multiselect, .multiselect-option { margin-left: 0 !important; }
+
 @media (max-width: 480px) {
   :root { --padding-card: 20px; --padding-container-top: 20px; }
 }

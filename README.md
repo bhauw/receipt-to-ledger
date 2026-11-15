@@ -19,7 +19,7 @@ Team: Braxton Hauw, Lucy Liu. Built with n8n.
 **3. Import the workflow (5 min)**
 - In n8n, choose Create workflow → ⋯ menu → Import from file → `workflow/receipt-to-ledger.json`.
 - Open both **AI** nodes ("Read receipt (AI)" and "Write the nudge (AI)"). Under Credential, pick **n8n free OpenAI API credits**.
-- Open the 3 **Google Sheets** nodes:
+- Open the 3 **Google Sheets** nodes (pick the document, then the tab from the list):
   - Credential: Create new → Sign in with Google.
   - Document: paste your sheet's URL.
   - Sheet: `Ledger`.

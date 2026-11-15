@@ -100,8 +100,9 @@ input:focus, select:focus, textarea:focus { box-shadow: 0 0 0 3px rgba(29, 134, 
 #submit-btn:hover { filter: brightness(1.08); }
 #submit-btn:active { transform: translateY(1px); }
 
-/* Review page: what the AI read, printed like a receipt. */
-.r-card {
+/* Review page: what the AI read, printed like a receipt.
+   n8n strips class attributes from custom HTML, so these style plain tags inside the HTML block. */
+.form-group.html {
   font-family: var(--mono);
   background: #fffdf8;
   border: 1px solid var(--paper-edge);
@@ -110,59 +111,56 @@ input:focus, select:focus, textarea:focus { box-shadow: 0 0 0 3px rgba(29, 134, 
   color: var(--ink);
   text-align: left;
 }
-.r-vendor { font-weight: 700; font-size: 16px; letter-spacing: 0.02em; }
-.r-meta { color: var(--ink-soft); font-size: 13px; margin-top: 4px; }
-.r-rule { border-top: 1px dashed #cfc7b2; margin: 12px 0; }
-.r-line { display: flex; justify-content: space-between; font-size: 14px; padding: 3px 0; }
-.r-total { font-weight: 700; font-size: 16px; padding-top: 8px; }
-.r-tags { display: flex; flex-wrap: wrap; gap: 6px; }
-.r-tag {
-  font: 500 12px/1 var(--font-family);
-  background: #efeadd;
-  color: var(--ink);
-  border-radius: 999px;
-  padding: 6px 10px;
+.form-group.html h3 { font: 700 16px/1.3 var(--mono); letter-spacing: 0.02em; margin: 0; }
+.form-group.html > div > p, .form-group.html p { margin: 4px 0 0; font-size: 13px; color: var(--ink-soft); }
+.card table { width: 100%; border-collapse: collapse; margin: 12px 0 4px; border-top: 1px dashed #cfc7b2; border-bottom: 1px dashed #cfc7b2; }
+.card td, .card th { padding: 4px 0; font: 14px/1.4 var(--mono); color: var(--ink); text-align: left; }
+.card td:last-child, .card th:last-child { text-align: right; }
+.card th { font-weight: 700; font-size: 16px; padding-top: 8px; border-top: 1px solid #e6e0d0; }
+.form-group.html small, .card small {
+  display: inline-block; margin: 8px 6px 0 0;
+  font: 500 12px/1 var(--font-family); color: var(--ink);
+  background: #efeadd; border-radius: 999px; padding: 6px 10px;
 }
-.r-check {
-  margin-top: 12px;
-  font: 600 13px/1.4 var(--font-family);
-  border-radius: 8px;
-  padding: 9px 12px;
+.form-group.html strong, .form-group.html em, .form-group.html i {
+  display: block; margin-top: 10px; border-radius: 8px; padding: 9px 12px;
+  font: 600 13px/1.4 var(--font-family); font-style: normal;
 }
-.r-ok { background: var(--green-soft); color: var(--green); }
-.r-warn { background: var(--amber-soft); color: var(--amber); }
+.form-group.html strong { background: var(--green-soft); color: var(--green); }
+.form-group.html em { background: var(--amber-soft); color: var(--amber); }
+.form-group.html i { background: #eef0ea; color: var(--ink-soft); font-weight: 500; margin-top: 6px; }
+
+/* Decision as big tap targets instead of tiny checkboxes. */
+.multiselect { display: grid; gap: 8px; }
+.multiselect-option {
+  display: flex; align-items: center; gap: 10px;
+  border: 1px solid var(--color-input-border); border-radius: 10px;
+  background: var(--color-input-bg); padding: 11px 12px; margin: 0;
+}
+.multiselect-option:has(:checked) { border-color: var(--green); background: var(--green-soft); }
+.multiselect-option label { font-size: 15px; color: var(--ink); cursor: pointer; flex: 1; }
 
 /* Logged page: the budget at a glance. */
-.d-card { text-align: left; color: var(--ink); margin-top: 6px; }
-.d-what { display: flex; flex-direction: column; gap: 2px; font-size: 15px; }
-.d-what span { color: var(--ink-soft); }
-.d-label {
-  margin-top: 18px;
-  font: 600 11px/1 var(--mono);
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--ink-soft);
+.card h4 {
+  margin: 18px 0 0; font: 600 11px/1 var(--mono); letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--ink-soft);
 }
-.d-bar {
-  -webkit-appearance: none;
-  appearance: none;
-  display: block;
-  width: 100%;
-  height: 12px;
-  margin: 10px 0 8px;
-  border: 0;
-  border-radius: 999px;
-  overflow: hidden;
-  background: #e6e0d0;
+.card progress {
+  -webkit-appearance: none; appearance: none; display: block;
+  width: 100%; height: 12px; margin: 10px 0 0; border: 0; border-radius: 999px;
+  overflow: hidden; background: #e6e0d0;
 }
-.d-bar::-webkit-progress-bar { background: #e6e0d0; border-radius: 999px; }
-.d-bar::-webkit-progress-value { background: var(--green); border-radius: 999px; }
-.d-bar::-moz-progress-bar { background: var(--green); border-radius: 999px; }
-.d-nums { display: flex; justify-content: space-between; font: 600 14px/1.3 var(--mono); }
-.d-sub { color: var(--ink-soft); font-size: 13px; margin-top: 4px; }
-.d-chip { margin-top: 12px; border-radius: 8px; padding: 10px 12px; font-size: 14px; line-height: 1.4; }
-.d-owed { background: #e8eefb; color: #23407a; }
-.d-keep { background: var(--amber-soft); color: var(--amber); }
+.card progress::-webkit-progress-bar { background: #e6e0d0; border-radius: 999px; }
+.card progress::-webkit-progress-value { background: var(--green); border-radius: 999px; }
+.card progress::-moz-progress-bar { background: var(--green); border-radius: 999px; }
+.card progress + table { border: 0; margin-top: 6px; }
+.card progress + table td { font-weight: 600; }
+.card blockquote, .card aside {
+  margin: 12px 0 0; border-radius: 8px; padding: 10px 12px;
+  font-size: 14px; line-height: 1.4; text-align: left;
+}
+.card blockquote { background: #e8eefb; color: #23407a; }
+.card aside { background: var(--amber-soft); color: var(--amber); }
 
 @media (max-width: 480px) {
   :root { --padding-card: 20px; --padding-container-top: 20px; }

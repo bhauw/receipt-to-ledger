@@ -176,3 +176,89 @@ input:focus, select:focus, textarea:focus { box-shadow: 0 0 0 3px rgba(29, 134, 
 @media (max-width: 480px) {
   :root { --padding-card: 20px; --padding-container-top: 20px; }
 }
+
+/* ---- Lucy pass 2 (2026-11-15) ---- */
+/* Even rhythm between fields on every page. */
+.inputs-wrapper > div, .inputs-wrapper > .form-group { margin-bottom: 22px !important; }
+.inputs-wrapper > div:last-child { margin-bottom: 8px !important; }
+.form-label { display: block; margin-bottom: 8px; }
+
+/* Review card: printed straight onto the receipt instead of a box inside a box. */
+.form-group.html {
+  background: transparent; border: 0; border-radius: 0;
+  border-top: 1px dashed #cfc7b2; border-bottom: 1px dashed #cfc7b2;
+  padding: 18px 0 16px; text-align: center;
+}
+.form-group.html h3 { font-size: 18px; letter-spacing: 0.08em; text-transform: uppercase; }
+.form-group.html table { border-top: 0; margin-top: 14px; }
+.form-group.html td { color: var(--ink-soft); }
+.form-group.html th { font-size: 17px; border-top: 1px dashed #cfc7b2; padding-top: 10px; }
+.form-group.html small { margin: 10px 3px 0; background: #ebe5d5; font-weight: 600; }
+.form-group.html strong, .form-group.html em, .form-group.html i { text-align: left; margin-top: 12px; }
+.form-group.html p:has(> small) { margin-top: 2px; }
+
+/* Decision: full-width rows, flush with the other fields, bigger target. */
+.multiselect { gap: 10px; margin: 0 !important; }
+.multiselect-option {
+  min-height: 52px; padding: 0 14px; gap: 12px; margin: 0 !important;
+  transition: border-color .15s, background .15s; cursor: pointer;
+}
+.multiselect-option:hover { border-color: #b9b09a; }
+.multiselect-option label { padding: 15px 0; margin: 0; font-weight: 500; }
+.multiselect-option:has(:checked) label { font-weight: 650; color: var(--green); }
+.multiselect-checkbox { flex: none; margin: 0 !important; position: static !important; }
+
+/* Logged / Not logged pages share the header treatment of the form pages. */
+.card .header::before {
+  content: "RECEIPT-TO-LEDGER"; display: block; font: 600 11px/1 var(--mono);
+  letter-spacing: 0.18em; color: var(--green); margin-bottom: 12px;
+}
+.card .header h1 { font-weight: 700; font-size: 26px; letter-spacing: -0.01em; color: var(--ink); margin-bottom: 6px; }
+.card .header p { color: var(--ink-soft); font-size: 15px; line-height: 1.5; }
+.card .header p > b { display: block; font: 700 15px/1.3 var(--mono); letter-spacing: 0.08em; color: var(--ink); margin-top: 6px; }
+.card .header h4 { margin-top: 22px; padding-bottom: 10px; border-bottom: 1px dashed #cfc7b2; }
+.card .header table { border: 0; margin-top: 4px; }
+/* Budget bar: <s> holds 20 block characters; the filled part sits in <mark>. */
+.card .header s {
+  display: block; height: 12px; overflow: hidden; border-radius: 999px; margin: 14px 0 6px;
+  font: 22px/12px var(--mono); letter-spacing: -0.5px; white-space: nowrap; text-decoration: none;
+  color: #e1dac8; text-align: left;
+}
+.card .header s mark { background: none; color: var(--green); }
+.card .header td { padding: 8px 0; border-bottom: 1px dotted #e1dac8; vertical-align: top; }
+.card .header td:first-child { font-size: 13px; padding-right: 16px; }
+.card .header td:last-child { white-space: nowrap; }
+.card .header td:last-child { font-weight: 600; }
+.card .header tr:last-child td { border-bottom: 0; }
+
+/* n8n pads the radio list 6px; line it up with the other fields. */
+.multiselect { padding: 0 !important; }
+.multiselect-option { padding-top: 0; }
+.multiselect[data-radio-select] .multiselect-checkbox { width: 20px; height: 20px; border-width: 1.5px; border-color: #b9b09a; }
+.multiselect[data-radio-select] .multiselect-checkbox:checked { border-width: 6px; border-color: var(--green); background: #fff; }
+
+/* Only show the category picker once "Change category" is picked. */
+.inputs-wrapper:has(.multiselect[data-radio-select]):not(:has(.multiselect-option:nth-child(2) :checked)) .form-group:has(select) { display: none; }
+.form-group:has(select) { animation: r2l-in .18s ease-out; }
+@keyframes r2l-in { from { opacity: 0; transform: translateY(-4px); } }
+
+/* n8n reserves a blank line under every field for its "required" error; only take the space when it shows. */
+.error-hidden:not(.error-show) { display: none; }
+
+/* Decision: one row of three instead of a stack. */
+.multiselect[data-radio-select] { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+.multiselect[data-radio-select] .multiselect-option { position: relative; min-height: 0; padding: 0; justify-content: center; text-align: center; }
+.multiselect[data-radio-select] .multiselect-checkbox { position: absolute !important; opacity: 0; pointer-events: none; }
+.multiselect[data-radio-select] .multiselect-option label { padding: 14px 6px; font-size: 14px; font-weight: 600; line-height: 1.2; color: var(--ink); }
+.multiselect[data-radio-select] .multiselect-option:has(:focus-visible) { outline: 2px solid var(--green); outline-offset: 2px; }
+.multiselect[data-radio-select] .multiselect-option:nth-child(3):has(:checked) { border-color: #b4532a; background: #fbe9e2; }
+.multiselect[data-radio-select] .multiselect-option:nth-child(3):has(:checked) label { color: #9a3f1b; }
+.multiselect[data-radio-select] .multiselect-option label { text-align: center !important; }
+.multiselect[data-radio-select] .multiselect-option:has(:checked) label { color: var(--green); }
+.multiselect[data-radio-select] .multiselect-option:nth-child(3):has(:checked) label { color: #9a3f1b; }
+/* A: icon tiles */
+.multiselect[data-radio-select] .multiselect-option label::before { display: block; font-size: 20px; margin-bottom: 4px; font-weight: 700; }
+.multiselect[data-radio-select] .multiselect-option:nth-child(1) label::before { content: "✓"; }
+.multiselect[data-radio-select] .multiselect-option:nth-child(2) label::before { content: "✎"; }
+.multiselect[data-radio-select] .multiselect-option:nth-child(3) label::before { content: "✕"; }
+.multiselect[data-radio-select] .multiselect-option label { padding: 12px 6px 13px; }

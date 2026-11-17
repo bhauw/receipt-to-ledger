@@ -608,3 +608,13 @@ form:has(input[type="file"]) .inputs-wrapper label.form-label:not(.form-required
 form:has(input[type="file"]) #submit-btn:disabled { font-size: 0 !important; opacity: 1; }
 form:has(input[type="file"]) #submit-btn:disabled::after { content: "Reading your receipt\2026"; font-size: 16px; font-weight: 600; }
 form:has(input[type="file"]) #submit-btn:disabled span { margin-right: 8px; }
+
+/* Check page: the button says what will happen. Picking Reject turns "Log it" into a rust "Don't log it". */
+form:not(:has(input[type="file"])):has(.multiselect[data-radio-select] .multiselect-option:nth-child(3) :checked) #submit-btn {
+  background: var(--rust) !important; color: var(--on-rust) !important; font-size: 0 !important;
+  box-shadow: 0 8px 20px rgba(168, 71, 42, 0.25);
+}
+form:not(:has(input[type="file"])):has(.multiselect[data-radio-select] .multiselect-option:nth-child(3) :checked) #submit-btn::after {
+  content: "Don\2019t log it"; font-size: 16px; font-weight: 600;
+}
+form:not(:has(input[type="file"])):has(.multiselect[data-radio-select] .multiselect-option:nth-child(3) :checked) #submit-btn span { margin-right: 8px; }

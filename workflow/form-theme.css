@@ -237,8 +237,6 @@ input:focus, select:focus, textarea:focus { box-shadow: 0 0 0 3px rgba(29, 134, 
 .multiselect[data-radio-select] .multiselect-checkbox { width: 20px; height: 20px; border-width: 1.5px; border-color: #b9b09a; }
 .multiselect[data-radio-select] .multiselect-checkbox:checked { border-width: 6px; border-color: var(--green); background: #fff; }
 
-/* Only show the category picker once "Change category" is picked. */
-.inputs-wrapper:has(.multiselect[data-radio-select]):not(:has(.multiselect-option:nth-child(2) :checked)) .form-group:has(select) { display: none; }
 .form-group:has(select) { animation: r2l-in .18s ease-out; }
 @keyframes r2l-in { from { opacity: 0; transform: translateY(-4px); } }
 
@@ -262,3 +260,69 @@ input:focus, select:focus, textarea:focus { box-shadow: 0 0 0 3px rgba(29, 134, 
 .multiselect[data-radio-select] .multiselect-option:nth-child(2) label::before { content: "✎"; }
 .multiselect[data-radio-select] .multiselect-option:nth-child(3) label::before { content: "✕"; }
 .multiselect[data-radio-select] .multiselect-option label { padding: 12px 6px 13px; }
+
+/* ---- Stage 1 fixes (2026-11-16): contrast, mobile, upload zone, focus ---- */
+/* AA contrast: darker text green and amber, n8n's error red, 3:1 control borders, readable placeholder. */
+:root {
+  --green: #176f46;
+  --amber: #8a5208;
+  --color-error: #c4161f;
+  --color-input-border: #8f8672;
+  --font-size-input: 16px; /* 16px stops iOS Safari zooming when a field is focused */
+}
+input, select, textarea { font-size: 16px !important; }
+::placeholder { color: #6f6757 !important; opacity: 1 !important; }
+.error-show, .error-text { color: #c4161f !important; }
+input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible, a:focus-visible {
+  outline: 2px solid var(--green); outline-offset: 2px;
+}
+
+/* Receipt photo: a big tap zone instead of the browser's tiny "Choose File" button. */
+input[type="file"] {
+  width: 100%; box-sizing: border-box; padding: 16px 14px; cursor: pointer;
+  border: 2px dashed var(--color-input-border) !important; border-radius: 12px; background: #fffdf8;
+  font: 14px/1.4 var(--font-family); color: var(--ink-soft);
+}
+input[type="file"]::file-selector-button {
+  display: block; width: 100%; margin: 0 0 10px; padding: 14px 12px; cursor: pointer;
+  border: 0; border-radius: 10px; background: var(--green); color: #fff;
+  font: 650 16px/1.2 var(--font-family);
+}
+input[type="file"]:hover { border-color: var(--green) !important; }
+
+/* Review: the total is the number that matters, so make it the biggest thing on the receipt. */
+.form-group.html th:last-child { font-size: 22px; letter-spacing: -0.01em; }
+.form-group.html td:last-child { font-variant-numeric: tabular-nums; }
+/* The category picker stays visible (screen readers and keyboards could not find it when hidden). */
+.inputs-wrapper .form-group:has(select) { display: block !important; }
+/* Icon tiles: the glyph is decoration, so screen readers skip it. */
+.multiselect[data-radio-select] .multiselect-option:nth-child(1) label::before { content: "✓" / ""; }
+.multiselect[data-radio-select] .multiselect-option:nth-child(2) label::before { content: "✎" / ""; }
+.multiselect[data-radio-select] .multiselect-option:nth-child(3) label::before { content: "✕" / ""; }
+
+/* Logged page: a clear way back to the start. */
+.card .header a {
+  display: inline-block; margin-top: 16px; padding: 12px 18px; border-radius: 12px;
+  background: var(--green); color: #fff !important; font: 650 15px/1 var(--font-family); text-decoration: none;
+}
+
+/* Budget bar on the Logged page (built from tags n8n keeps: h3 > strong / em / b). */
+.card .header h3 {
+  display: block; height: 12px; overflow: hidden; border-radius: 999px; margin: 14px 0 6px;
+  font: 400 22px/12px var(--mono); letter-spacing: -1px; white-space: nowrap; text-align: left;
+}
+.card .header h3 strong { color: var(--green); font-weight: 400; }
+.card .header h3 em { color: #e1dac8; font-style: normal; }
+.card .header h3 b { display: inline; color: #b4532a; font: inherit; letter-spacing: inherit; margin: 0; }
+
+/* Logged table: labels stay on one line, long values (like the tax note) wrap instead of running off the card. */
+.card .header table { table-layout: auto; width: 100%; }
+.card .header td:first-child { white-space: nowrap; }
+.card .header td:last-child { white-space: normal !important; text-align: right; overflow-wrap: anywhere; }
+
+/* Phones: stop three paddings stacking up, which left the card only 278px wide on a 375px screen. */
+@media (max-width: 480px) {
+  body { padding: 0 8px 24px; }
+  .container { padding: 0 !important; margin: 0 auto !important; width: 100% !important; max-width: 100% !important; }
+  .card { padding: 20px 18px !important; }
+}

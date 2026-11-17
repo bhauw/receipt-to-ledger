@@ -413,8 +413,8 @@ const reduce=!!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)'
 
 /* ---------- small helpers ---------- */
 const esc=v=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const num = v => Number(String(v ?? '').replace(/[^0-9.\-]/g,'')) || 0;
-const isoDate = v => { const s = String(v ?? '').trim(); if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,10); const us = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/); if (us) return `${us[3]}-${us[1].padStart(2,'0')}-${us[2].padStart(2,'0')}`; if (/^\d{5}(\.\d+)?$/.test(s)) return new Date(Math.round((Number(s) - 25569) * 864e5)).toISOString().slice(0,10); return s; };
+const num = v => { const s = String(v ?? '').replace(/−/g,'-'), n = Number(s.replace(/[^0-9.\-]/g,'')) || 0; return /^\s*\(.*\)\s*$/.test(s) ? -Math.abs(n) : n; };
+const isoDate = v => { const s = String(v ?? '').trim(); if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,10); const us = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?!\d)/); if (us) return `${us[3]}-${us[1].padStart(2,'0')}-${us[2].padStart(2,'0')}`; if (/^\d{5}(\.\d+)?$/.test(s)) return new Date(Math.round((Number(s) - 25569) * 864e5)).toISOString().slice(0,10); return s; };
 const str=v=>String(v==null?'':v).trim();
 const has=v=>v!=null&&String(v).trim()!=='';
 const round2=n=>Math.round(n*100)/100;
@@ -470,7 +470,7 @@ const TP=parts(TODAY),TY=TP[0],TM=TP[1],TD=TP[2],TDIM=dim(TY,TM);
 
 /* ---------- normalise rows ---------- */
 function splitNames(v){
- const raw=Array.isArray(v)?v:String(v==null?'':v).split(/[,;]/);
+ const raw=Array.isArray(v)?v:String(v==null?'':v).split(/[,;&]|\s+and\s+/i);
  const seen={},out=[];
  raw.forEach(s=>{s=str(s);if(!s)return;const k=s.toLowerCase();if(seen[k])return;seen[k]=1;out.push({key:k,name:cap(s)})});
  return out;

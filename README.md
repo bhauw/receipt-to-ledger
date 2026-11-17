@@ -1,14 +1,17 @@
-# Receipt-to-Ledger
+# Tally
 
-![Receipt-to-Ledger](demo/devpost/cover.png)
+![Tally](demo/tally/cover.png)
 
-**Snap a receipt. AI reads it. You approve it in one tap. It lands in your ledger.** Built entirely in n8n for the UBC eProjects × n8n LOOP buildathon (2026) by Braxton Hauw and Lucy Liu.
+**Snap it. Tally it. Settle up.** Snap a receipt, AI reads it, you approve it in one tap, and it lands in your ledger. Built entirely in n8n for the UBC eProjects × n8n LOOP buildathon (2026) by Braxton Hauw and Lucy Liu. Formerly **Receipt-to-Ledger**, the name it was submitted under.
 
 ▶️ **Demo video:** https://youtu.be/3-x6X6M5cFs · 🏁 **Devpost:** https://devpost.com/software/receipt-to-ledger
 
 | Upload | Check what the AI read | Logged + budgeted |
 |---|---|---|
-| ![](demo/ui-v2/1-upload-laptop.png) | ![](demo/ui-v2/2-review-laptop.png) | ![](demo/ui-v2/3-logged-laptop.png) |
+| ![Upload page, light mode](demo/tally/upload-light.png) | ![Review page, light mode](demo/tally/review-light.png) | ![Logged page, light mode](demo/tally/logged-light.png) |
+| ![Upload page, dark mode](demo/tally/upload-dark.png) | ![Review page, dark mode](demo/tally/review-dark.png) | ![Logged page, dark mode](demo/tally/logged-dark.png) |
+
+The look: one sage teal (`#458076`) on pure white or pure black depending on your phone's setting, liquid glass cards, Fraunces for headlines and money, Manrope for text and IBM Plex Mono for receipt figures. The whole theme lives in [`workflow/form-theme.css`](workflow/form-theme.css).
 
 **What it does**
 - AI vision reads the store, date, subtotal, GST, PST and total, and suggests a category.

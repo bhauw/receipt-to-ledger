@@ -505,3 +505,6 @@ input[type="radio"], input[type="checkbox"] { accent-color: var(--green); }
 .file-input-wrapper .clear-button:hover { border-color: var(--green) !important; }
 .file-input-wrapper .clear-button:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
 .file-input-wrapper input[type="file"] { padding-right: 56px; }
+
+/* Logged / Not logged: "Open Tally" sits beside "Snap another receipt" as the quieter button. */
+.card .header a + a { margin-left: 8px; background: transparent; color: var(--ink) !important; border: 1px solid var(--color-input-border); }

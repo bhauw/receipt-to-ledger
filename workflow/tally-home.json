@@ -1,0 +1,81 @@
+{
+  "name": "Tally home (app page)",
+  "nodes": [
+    {
+      "name": "Open Tally",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "tally-CHANGE-ME",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "name": "Get template",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 0],
+      "parameters": {
+        "url": "https://raw.githubusercontent.com/bhauw/receipt-to-ledger/main/app/home.html",
+        "options": { "response": { "response": { "responseFormat": "text", "outputPropertyName": "data" } } }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    },
+    {
+      "name": "Read ledger",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [440, 0],
+      "parameters": {
+        "documentId": { "__rl": true, "mode": "id", "value": "" },
+        "sheetName": { "__rl": true, "mode": "list", "value": "" },
+        "options": {}
+      },
+      "credentials": { "googleSheetsOAuth2Api": { "id": "", "name": "Google Sheets account" } },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1500,
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "name": "Build page",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 0],
+      "parameters": {
+        "jsCode": "// Build the Tally home page: the template from GitHub plus this ledger's rows.\nconst TZ = 'America/Vancouver';\nconst FORM = 'https://bxh.app.n8n.cloud/form/8c9eb5b1-667c-407f-bb3f-777d15a89697';\nconst tpl = String($('Get template').first().json.data || '');\nconst rows = $input.all().map(i => i.json).filter(r => r && (r['Date'] || r['Vendor'])).map(r => ({\n  date: r['Date'], vendor: r['Vendor'], subtotal: r['Subtotal'], gst: r['GST'], pst: r['PST'], hst: r['HST'],\n  total: r['Total'], yourShare: r['Your share'], splitWith: r['Split with'], eachOwes: r['Each owes you'],\n  category: r['Category'], keep: r['Keep for taxes'], checks: r['Checks'], paidWith: r['Paid with'], note: r['Note'],\n}));\nconst DATA = { today: new Date().toLocaleDateString('en-CA', { timeZone: TZ }), generatedAt: new Date().toISOString(),\n  budget: 600, form: FORM, name: 'Braxton', rows };\n// Safe inside a <script>: escape \"<\" and the two JS line separators.\nconst BS = String.fromCharCode(92);\nconst json = JSON.stringify(DATA)\n  .split('<').join(BS + 'u003c')\n  .split(String.fromCharCode(0x2028)).join(BS + 'u2028')\n  .split(String.fromCharCode(0x2029)).join(BS + 'u2029');\nconst MARK = '/*__TALLY_DATA__*/null';\nconst html = tpl.includes(MARK) ? tpl.split(MARK).join(json)\n  : '<!doctype html><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width\"><title>Tally</title><p style=\"font:16px system-ui;padding:24px\">Tally could not load its page. Try again in a minute.</p>';\nreturn [{ json: { html } }];"
+      }
+    },
+    {
+      "name": "Send page",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [880, 0],
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.html }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              { "name": "Content-Type", "value": "text/html; charset=utf-8" },
+              { "name": "Cache-Control", "value": "no-store" }
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Open Tally": { "main": [[{ "node": "Get template", "type": "main", "index": 0 }]] },
+    "Get template": { "main": [[{ "node": "Read ledger", "type": "main", "index": 0 }]] },
+    "Read ledger": { "main": [[{ "node": "Build page", "type": "main", "index": 0 }]] },
+    "Build page": { "main": [[{ "node": "Send page", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1", "timezone": "America/Vancouver" }
+}

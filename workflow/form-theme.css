@@ -495,3 +495,13 @@ input[type="radio"], input[type="checkbox"] { accent-color: var(--green); }
 
 /* Phones: a little air above the card. */
 @media (max-width: 480px) { .container { margin-top: 16px !important; } }
+
+/* Photo picker: n8n's clear (x) button sat on top of "Choose File". Put it beside the file name instead. */
+.file-input-wrapper .clear-button {
+  top: auto !important; bottom: 12px !important; right: 12px !important; transform: none !important;
+  width: 32px !important; height: 32px !important; line-height: 30px !important; font-size: 18px !important;
+  background: var(--chip) !important; color: var(--ink) !important; border: 1px solid var(--color-input-border) !important;
+}
+.file-input-wrapper .clear-button:hover { border-color: var(--green) !important; }
+.file-input-wrapper .clear-button:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+.file-input-wrapper input[type="file"] { padding-right: 56px; }

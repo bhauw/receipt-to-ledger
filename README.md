@@ -6,6 +6,10 @@
 
 ▶️ **Demo video:** https://youtu.be/3-x6X6M5cFs · 🏁 **Devpost:** https://devpost.com/software/receipt-to-ledger
 
+🎬 **New Tally walkthrough (2:09):** [demo/tally-demo.mp4](demo/tally-demo.mp4)
+
+[![Tally walkthrough](demo/tally/video-poster.png)](demo/tally-demo.mp4)
+
 | Upload | Check what the AI read | Logged + budgeted |
 |---|---|---|
 | ![Upload page, light mode](demo/tally/upload-light.png) | ![Review page, light mode](demo/tally/review-light.png) | ![Logged page, light mode](demo/tally/logged-light.png) |

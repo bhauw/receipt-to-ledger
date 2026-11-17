@@ -349,7 +349,8 @@ body{min-height:100vh;min-height:100dvh}
    <section class="sec" aria-labelledby="h-v"><h2 id="h-v">Top vendors</h2><div class="card vend" id="sp-vendors"></div></section>
    <section class="sec" aria-labelledby="h-t"><h2 id="h-t">Taxes paid</h2>
     <div class="card"><table class="tbl"><caption class="sr">Taxes paid</caption><tbody id="sp-tax-body"></tbody></table>
-     <p class="keep"><svg class="ic s" aria-hidden="true"><use href="#i-receipt"/></svg><span id="sp-keep"></span></p></div>
+     <p class="keep"><svg class="ic s" aria-hidden="true"><use href="#i-receipt"/></svg><span id="sp-keep"></span></p>
+     <p class="note" id="sp-tax-hint" hidden>Split receipts count your share only</p></div>
    </section>
    <section class="sec" aria-labelledby="h-i"><h2 id="h-i">What stands out</h2><div class="ins" id="sp-ins"></div></section>
    <a class="week" href="#recap"><div><p class="l">This week</p><p class="b">See the weekly recap</p></div><svg class="ic" aria-hidden="true"><use href="#i-chev"/></svg></a>
@@ -485,11 +486,11 @@ function normRow(r,i){
  const total=num(r.total);
  const mine=has(r.yourShare)?num(r.yourShare):total;
  const split=splitNames(r.splitWith);
- let each=num(r.eachOwes);
- if(split.length&&!each&&total>mine)each=round2((total-mine)/split.length);
+ const each=num(r.eachOwes);
+ const f=total?mine/total:1; /* your share of the receipt; full tax when total is 0 */
  const date=isoDate(r.date);
  const cat=str(r.category)||'Uncategorized';
- return {i,date,dated:validIso(date),vendor:str(r.vendor)||'Unknown vendor',subtotal:num(r.subtotal),gst:num(r.gst),pst:num(r.pst),hst:num(r.hst),total,mine,
+ return {i,date,dated:validIso(date),vendor:str(r.vendor)||'Unknown vendor',subtotal:num(r.subtotal),gst:num(r.gst),pst:num(r.pst),hst:num(r.hst),gstM:num(r.gst)*f,pstM:num(r.pst)*f,hstM:num(r.hst)*f,total,mine,
   partial:Math.abs(mine-total)>0.005,split,each,cat,ck:cat.toLowerCase(),keep:keepText(r.keep),checks:str(r.checks),paidWith:str(r.paidWith),note:str(r.note),
   blank:!str(r.vendor)&&!total};
 }
@@ -522,10 +523,10 @@ function rangeFor(p,off){
  return {start,end,n:dnum(end)-dnum(start)+1,budget:BUDGET*so,ts,y,months:so};
 }
 function agg(rows){
- const a={rows,count:rows.length,spent:0,gst:0,pst:0,hst:0,cats:{},vend:{},keepN:0,keepSum:0,reasons:[]};
+ const a={rows,count:rows.length,spent:0,gst:0,pst:0,hst:0,splitTax:false,cats:{},vend:{},keepN:0,keepSum:0,reasons:[]};
  const seenR={};
  rows.forEach(r=>{
-  a.spent+=r.mine;a.gst+=r.gst;a.pst+=r.pst;a.hst+=r.hst;
+  a.spent+=r.mine;a.gst+=r.gstM;a.pst+=r.pstM;a.hst+=r.hstM;if(r.partial||r.split.length)a.splitTax=true;
   const c=a.cats[r.ck]||(a.cats[r.ck]={key:r.ck,name:r.cat,amt:0});c.amt+=r.mine;
   const vk=r.vendor.toLowerCase(),v=a.vend[vk]||(a.vend[vk]={name:r.vendor,amt:0,n:0,part:0,cats:{}});
   v.amt+=r.mine;v.n++;if(r.partial)v.part++;v.cats[r.ck]=(v.cats[r.ck]||0)+r.mine;
@@ -535,19 +536,41 @@ function agg(rows){
  return a;
 }
 function catGroups(a){
- const list=Object.keys(a.cats).map(k=>a.cats[k]).map(c=>({key:c.key,name:c.name,amt:round2(c.amt)})).filter(c=>c.amt>0)
-  .sort((x,y)=>y.amt-x.amt||x.name.localeCompare(y.name));
+ const all=Object.keys(a.cats).map(k=>a.cats[k]).map(c=>({key:c.key,name:c.name,amt:round2(c.amt)}));
+ const list=all.filter(c=>c.amt>0).sort((x,y)=>y.amt-x.amt||x.name.localeCompare(y.name));
+ /* net-negative categories (refunds beat spending) are not dropped: one Refunds row keeps the list adding up to spent */
+ const refund=round2(all.filter(c=>c.amt<0).reduce((s,c)=>s+c.amt,0));
  const tot=list.reduce((s,c)=>s+c.amt,0);
  const out=list.slice(0,5).map(c=>({key:c.key,name:c.name,amt:c.amt,cls:colour(c.key)}));
  if(list.length>5){out.push({key:'__other',name:'Other',amt:round2(list.slice(5).reduce((s,c)=>s+c.amt,0)),cls:'c6'})}
- out.forEach(c=>{c.pct=div(c.amt,tot)*100});
- return {list:out,top:list,tot};
+ /* largest-remainder rounding so the shown whole-number shares add to exactly 100 */
+ const ex=out.map(c=>div(c.amt,tot)*100),fl=ex.map(Math.floor);
+ let left=out.length?100-fl.reduce((s,v)=>s+v,0):0;
+ ex.map((v,i)=>({i,r:v-fl[i]})).sort((x,y)=>y.r-x.r||x.i-y.i).forEach(o=>{if(left>0){fl[o.i]++;left--}});
+ out.forEach((c,i)=>{c.pct=fl[i]});
+ return {list:out,top:list,tot,refund};
+}
+const catRowsHTML=(g,empty)=>{
+ let h=g.list.map(x=>'<div class="bar"><span class="n"><span class="dot '+x.cls+'"></span>'+esc(x.name)+'</span><span class="amt">'+money(x.amt)+'<span class="pct">'+x.pct+'%</span></span><div class="t"><i class="'+x.cls+'" style="width:'+x.pct+'%"></i></div></div>').join('');
+ if(g.refund<0)h+='<div class="bar"><span class="n"><span class="dot c6"></span>Refunds</span><span class="amt">'+money(g.refund)+'</span></div>';
+ return h||'<p class="empty" style="margin:0">'+empty+'</p>';
+};
+/* budget % used: floor while under (at least 1 once anything is spent, never 100 with money left), ceil once over */
+function usedPercent(spent,budget){
+ const s=Math.round(spent*100),b=Math.round(budget*100);
+ if(s<=0||b<=0)return 0;
+ if(s>b)return Math.ceil(s*100/b);
+ if(s===b)return 100;
+ return Math.max(1,Math.min(Math.floor(s*100/b),99));
 }
 function calc(p){
  const rg=rangeFor(p,0),pr=rangeFor(p,-1);
  const inR=g=>ALL.filter(r=>r.dated&&r.date>=g.start&&r.date<=g.end);
  const rows=inR(rg),prows=inR(pr);
- return {p,rg,pr,rows,a:agg(rows),prows,pa:agg(prows)};
+ /* like for like: same number of days into the previous period (month: 1..min(N, its length); week: Mon to same weekday; term: same days in) */
+ const into=dnum(TODAY)-dnum(rg.start),pe=fromNum(Math.min(dnum(pr.start)+into,dnum(pr.end)));
+ const pcmp=agg(ALL.filter(r=>r.dated&&r.date>=pr.start&&r.date<=pe));
+ return {p,rg,pr,rows,a:agg(rows),prows,pa:agg(prows),pcmp,pcEnd:pe};
 }
 const byDateDesc=(x,y)=>x.date<y.date?1:x.date>y.date?-1:y.i-x.i;
 
@@ -600,14 +623,14 @@ const openOwed=()=>OWED.filter(o=>!paid[o.key]);
 function keyPoints(){
  const c=calc('month'),a=c.a,out=[];
  const g=catGroups(a);
- if(a.count&&g.top.length){const t=g.top[0];out.push({href:'#spending',icon:'i-chart',text:t.name+' is your biggest category ('+money(t.amt)+', '+Math.round(div(t.amt,g.tot)*100)+'%).'})}
+ if(a.count&&g.top.length){const t=g.top[0];out.push({href:'#spending',icon:'i-chart',text:t.name+' is your biggest category ('+money(t.amt)+', '+g.list[0].pct+'%).'})}
  const op=openOwed();
  if(op.length){const tot=round2(op.reduce((s,o)=>s+o.amt,0));out.push({href:'#owed',icon:'i-people',text:joinNames(op.map(o=>o.name))+(op.length>1?' owe':' owes')+' you '+money(tot)+'.'})}
  const tax=round2(a.gst+a.pst+a.hst);
  if(tax>0||a.keepN>0){
   const kinds=[a.gst>0?'GST':'',a.pst>0?'PST':'',a.hst>0?'HST':''].filter(Boolean);
   let t='';
-  if(tax>0)t=money(tax)+' '+(kinds.length?joinNames(kinds):'tax')+' paid this month';
+  if(tax>0)t=money(tax)+' '+(kinds.length?joinNames(kinds):'tax')+' paid this month'+(a.splitTax?' (your share of split receipts)':'');
   if(a.keepN>0){
    const kc={};a.rows.forEach(r=>{if(r.keep)kc[r.cat]=1});const kcs=Object.keys(kc);
    const what=kcs.length===1?kcs[0]+' receipts':plural(a.keepN,'receipt');
@@ -633,7 +656,7 @@ function renderHome(){
  big.innerHTML=(over?'<span class="ovl">Over by</span> ':'')+esc(bigTxt);
  fitBig(big,bigTxt);
  $('#h-of').textContent=over?'spent '+money(a.spent)+' of '+moneyS(BUDGET):'left of '+moneyS(BUDGET);
- const used=div(a.spent,BUDGET),usedPct=Math.round(Math.max(used,0)*100);
+ const used=div(a.spent,BUDGET),usedPct=usedPercent(a.spent,BUDGET);
  const expFrac=TD/TDIM,expected=BUDGET*expFrac,expPct=Math.round(expFrac*100),expTxt='$'+Math.round(expected).toLocaleString('en-US');
  $('#h-pct').textContent=usedPct+'%';
  $('#h-ring').innerHTML=ringSVG(used,expFrac,over,'Budget ring. '+money(a.spent)+' of '+moneyS(BUDGET)+' used, '+usedPct+' percent. The tick marks a steady pace, '+expPct+' percent, about '+expTxt+' by day '+TD+'.');
@@ -665,7 +688,7 @@ function renderTag(){
 }
 
 /* ---------- spending ---------- */
-const PW={month:{last:'last month',now:'this month',ll:'Last month',bl:'Budget'},week:{last:'last week',now:'this week',ll:'Last week',bl:'Weekly budget'},term:{last:'last term',now:'this term',ll:'Last term',bl:'Term budget'}};
+const PW={month:{at:'last month at this point',last:'last month',now:'this month',ll:'Last month',bl:'Budget'},week:{at:'last week at this point',last:'last week',now:'this week',ll:'Last week',bl:'Weekly budget'},term:{at:'last term at this point',last:'last term',now:'this term',ll:'Last term',bl:'Term budget'}};
 let period='month';
 const niceStep=raw=>{if(!(raw>0))return 25;const p=Math.pow(10,Math.floor(Math.log10(raw)));const m=[1,1.5,2,2.5,3,4,5,6,8,10];for(let i=0;i<m.length;i++)if(m[i]*p>=raw-1e-9)return m[i]*p;return 10*p};
 function yScale(v){const step=niceStep((v>0?v:100)/3),n=Math.max(Math.ceil((v>0?v:100)/step-1e-9),1),t=[];for(let i=0;i<=n;i++)t.push(round2(step*i));return {yMax:step*n,yT:t}}
@@ -743,8 +766,8 @@ function insights(c){
  if(!a.count)return ins;
  const g=catGroups(a);
  if(g.top.length){
-  const t=g.top[0],pct=Math.round(div(t.amt,g.tot)*100),pc=catGroups(c.pa),prev=pc.top.filter(x=>x.key===t.key)[0];
-  const pp=prev?Math.round(div(prev.amt,pc.tot)*100):null;
+  const t=g.top[0],pct=g.list[0].pct,pc=catGroups(c.pa),prev=pc.top.filter(x=>x.key===t.key)[0],pl=pc.list.filter(x=>x.key===t.key)[0];
+  const pp=prev?(pl?pl.pct:Math.round(div(prev.amt,pc.tot)*100)):null;
   if(prev&&c.pa.count&&Math.abs(pct-pp)>=1)ins.push(t.name+' is '+pct+'% of spending, '+(pct>pp?'up':'down')+' from '+pp+'% '+PW[c.p].last+'.');
   else ins.push(t.name+' is '+pct+'% of your spending '+PW[c.p].now+'.');
  }
@@ -774,15 +797,15 @@ function renderSpending(){
  $('#sp-l-l').textContent=W.ll;
  $('#sp-last').textContent=c.pa.count?money(c.pa.spent):'None';
  const dl=$('#sp-delta');
- if(c.pa.count){
-  const diff=round2(a.spent-c.pa.spent);
+ if(c.pcmp.count){
+  const diff=round2(a.spent-c.pcmp.spent);
   dl.hidden=false;dl.className='delta'+(over?' over':'');
-  dl.innerHTML=diff===0?esc('Same as '+W.last):svgUse(diff<0?'i-down':'i-up')+esc(money(Math.abs(diff))+' '+(diff<0?'below':'above')+' '+W.last);
+  dl.innerHTML=diff===0?esc('Same as '+W.at):svgUse(diff<0?'i-down':'i-up')+esc(money(Math.abs(diff))+' '+(diff<0?'below':'above')+' '+W.at);
  }else dl.hidden=true;
  /* categories */
  const g=catGroups(a);
  $('#sp-share').innerHTML=g.list.map(x=>'<i class="'+x.cls+'" style="flex:'+x.amt+' 1 0"></i>').join('');
- $('#sp-cats').innerHTML=g.list.length?g.list.map(x=>'<div class="bar"><span class="n"><span class="dot '+x.cls+'"></span>'+esc(x.name)+'</span><span class="amt">'+money(x.amt)+'<span class="pct">'+Math.round(x.pct)+'%</span></span><div class="t"><i class="'+x.cls+'" style="width:'+x.pct.toFixed(1)+'%"></i></div></div>').join(''):'<p class="empty" style="margin:0">No spending in this period yet.</p>';
+ $('#sp-cats').innerHTML=catRowsHTML(g,'No spending in this period yet.');
  /* chart */
  const startN=dnum(rg.start),byDay=new Array(rg.n).fill(0);
  a.rows.forEach(r=>{const o=dnum(r.date)-startN;if(o>=0&&o<rg.n)byDay[o]+=r.mine});
@@ -808,7 +831,8 @@ function renderSpending(){
  }).join(''):'<p class="empty" style="margin:0">No vendors in this period yet.</p>';
  /* taxes */
  const trow=(l,v,hd)=>'<tr><th scope="row">'+l+'</th><td class="amt">'+money(v)+'</td></tr>';
- $('#sp-tax-body').innerHTML=trow('GST (5%)',a.gst)+trow('PST (7%)',a.pst)+(a.hst>0?trow('HST',a.hst):'')+trow('Total tax',a.gst+a.pst+a.hst);
+ $('#sp-tax-body').innerHTML=trow('GST (5%)',a.gst)+trow('PST (7%)',a.pst)+(a.hst>0?trow('HST',a.hst):'')+trow('Your share of tax',a.gst+a.pst+a.hst);
+ $('#sp-tax-hint').hidden=!a.splitTax;
  $('#sp-keep').textContent=a.keepN?'Keep for taxes: '+plural(a.keepN,'receipt')+' ('+money(a.keepSum)+(a.reasons.length?', '+a.reasons.slice(0,2).join('; '):'')+').':'Nothing flagged to keep for taxes in this period.';
  const ins=insights(c);
  $('#sp-ins').innerHTML=ins.length?ins.map(t=>'<p>'+esc(t)+'</p>').join(''):'<p>Nothing to compare yet. Snap a receipt and this fills in.</p>';
@@ -915,7 +939,7 @@ function renderRecap(){
  const nz=days.filter(d=>d.sum>0);
  dd.setAttribute('aria-label','Spending by day, '+md(rg.start)+' to '+md(rg.end)+'. '+(nz.length?nz.map(d=>DOWL[dowOf(d.iso)]+' '+money(d.sum)).join(', ')+', every other day $0.00.':'Nothing spent yet this week.'));
  const g=catGroups(a);
- $('#rc-cats').innerHTML=g.list.length?g.list.map(x=>'<div class="bar"><span class="n"><span class="dot '+x.cls+'"></span>'+esc(x.name)+'</span><span class="amt">'+money(x.amt)+'<span class="pct">'+Math.round(x.pct)+'%</span></span><div class="t"><i class="'+x.cls+'" style="width:'+x.pct.toFixed(1)+'%"></i></div></div>').join(''):'<p class="empty" style="margin:0">No spending this week yet.</p>';
+ $('#rc-cats').innerHTML=catRowsHTML(g,'No spending this week yet.');
  /* one-sentence summary, like the Sunday email */
  const mc=calc('month'),spentM=mc.a.spent,exp=BUDGET*TD/TDIM,mname=MONL[TM-1];
  let s1;
